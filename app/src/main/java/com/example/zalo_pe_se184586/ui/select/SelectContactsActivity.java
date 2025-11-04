@@ -115,7 +115,7 @@ public class SelectContactsActivity extends AppCompatActivity implements SelectC
             Toast.makeText(this, R.string.error_min_members, Toast.LENGTH_SHORT).show();
             return;
         }
-        Group group = GroupRepository.getInstance().createGroup(groupName, selectedContacts);
+        Group group = GroupRepository.getInstance(this).createGroup(groupName, selectedContacts);
         Intent intent = new Intent(this, GroupChatActivity.class);
         intent.putExtra(GroupChatActivity.EXTRA_GROUP, group);
         startActivity(intent);

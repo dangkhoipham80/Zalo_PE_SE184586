@@ -1,9 +1,11 @@
 package com.example.zalo_pe_se184586.ui.select;
 
+import android.app.Application;
+
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
 
 import com.example.zalo_pe_se184586.data.ContactRepository;
 import com.example.zalo_pe_se184586.model.Contact;
@@ -14,15 +16,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-public class SelectContactsViewModel extends ViewModel {
+public class SelectContactsViewModel extends AndroidViewModel {
 
     private final List<Contact> allContacts = new ArrayList<>();
     private final MutableLiveData<List<Contact>> filteredContacts = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<Set<String>> selectedContactIds = new MutableLiveData<>(new HashSet<>());
     private final MediatorLiveData<Boolean> createEnabled = new MediatorLiveData<>();
 
-    public SelectContactsViewModel() {
-        allContacts.addAll(ContactRepository.getInstance().getContacts());
+    public SelectContactsViewModel(Application application) {
+        super(application);
+        allContacts.addAll(ContactRepository.getInstance(application).getContacts());
         filteredContacts.setValue(new ArrayList<>(allContacts));
         createEnabled.addSource(selectedContactIds, ids -> createEnabled.setValue(ids.size() >= 2));
     }

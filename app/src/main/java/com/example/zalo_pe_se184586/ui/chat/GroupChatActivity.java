@@ -7,6 +7,7 @@ import android.view.inputmethod.EditorInfo;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -16,8 +17,10 @@ import com.example.zalo_pe_se184586.databinding.ActivityGroupChatBinding;
 import com.example.zalo_pe_se184586.model.Contact;
 import com.example.zalo_pe_se184586.model.Group;
 import com.example.zalo_pe_se184586.model.Message;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.List;
+
 public class GroupChatActivity extends AppCompatActivity {
 
     public static final String EXTRA_GROUP = "extra_group";
@@ -37,36 +40,33 @@ public class GroupChatActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
+        // Setup RecyclerView
         adapter = new MessageAdapter();
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setStackFromEnd(true);
         binding.messagesRecycler.setLayoutManager(layoutManager);
         binding.messagesRecycler.setAdapter(adapter);
 
-        viewModel = new ViewModelProvider(this).get(GroupChatViewModel.class);
+        // Initialize ViewModel with proper factory for SavedStateHandle support
+        GroupChatViewModelFactory factory = new GroupChatViewModelFactory(this, getApplication());
+        viewModel = new ViewModelProvider(this, factory).get(GroupChatViewModel.class);
 
-        Group group = getIntent().getParcelableExtra(EXTRA_GROUP);
-        if (group != null) {
-            viewModel.setInitialGroup(group);
-        } else if (!viewModel.hasGroup()) {
-            finish();
-            return;
-        }
-
-        viewModel.getGroup().observe(this, updatedGroup -> {
-            if (updatedGroup == null) {
+        // Handle initial group data from intent (only on first creation)
+        if (savedInstanceState == null) {
+            Group group = getIntent().getParcelableExtra(EXTRA_GROUP);
+            if (group != null) {
+                viewModel.setInitialGroup(group);
+            } else if (!viewModel.hasGroup()) {
+                // No group data available, cannot proceed
+                finish();
                 return;
             }
-            binding.toolbar.setTitle(updatedGroup.getName());
-            binding.toolbar.setSubtitle(getString(R.string.members_count_format, updatedGroup.getMembers().size()));
-            binding.membersText.setText(joinMemberNames(updatedGroup.getMembers()));
-            List<Message> messages = updatedGroup.getMessages();
-            adapter.submitList(messages);
-            if (!messages.isEmpty()) {
-                binding.messagesRecycler.scrollToPosition(messages.size() - 1);
-            }
-        });
+        }
 
+        // Observe group changes (handles rotation and real-time updates)
+        viewModel.getGroup().observe(this, this::updateUI);
+
+        // Setup click listeners
         binding.sendButton.setOnClickListener(v -> submitMessage());
         binding.messageInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND) {
@@ -75,6 +75,31 @@ public class GroupChatActivity extends AppCompatActivity {
             }
             return false;
         });
+
+        // Make members clickable to show group info
+        binding.membersText.setOnClickListener(v -> showGroupInfo());
+    }
+
+    private void updateUI(Group group) {
+        if (group == null) {
+            return;
+        }
+
+        // Update toolbar
+        binding.toolbar.setTitle(group.getName());
+        binding.toolbar.setSubtitle(getString(R.string.members_count_format, group.getMembers().size()));
+
+        // Update members list
+        binding.membersText.setText(joinMemberNames(group.getMembers()));
+
+        // Update messages
+        List<Message> messages = group.getMessages();
+        adapter.submitList(messages);
+
+        // Scroll to latest message
+        if (!messages.isEmpty()) {
+            binding.messagesRecycler.scrollToPosition(messages.size() - 1);
+        }
     }
 
     private String joinMemberNames(List<Contact> members) {
@@ -100,6 +125,26 @@ public class GroupChatActivity extends AppCompatActivity {
         binding.messageInput.setText("");
     }
 
+    private void showGroupInfo() {
+        Group group = viewModel.getGroup().getValue();
+        if (group == null) {
+            return;
+        }
+
+        StringBuilder info = new StringBuilder();
+        info.append("Group Name: ").append(group.getName()).append("\n\n");
+        info.append("Members (").append(group.getMembers().size()).append("):\n");
+        for (Contact member : group.getMembers()) {
+            info.append("• ").append(member.getName()).append("\n");
+        }
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.group_info_title)
+                .setMessage(info.toString())
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
@@ -107,5 +152,11 @@ public class GroupChatActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        binding = null;
     }
 }

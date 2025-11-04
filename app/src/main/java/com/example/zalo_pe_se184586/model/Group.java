@@ -61,6 +61,14 @@ public class Group implements Parcelable {
         messages.add(message);
     }
 
+    // NEW METHOD: Get last message for preview
+    public Message getLastMessage() {
+        if (messages.isEmpty()) {
+            return null;
+        }
+        return messages.get(messages.size() - 1);
+    }
+
     @Override
     public int describeContents() {
         return 0;

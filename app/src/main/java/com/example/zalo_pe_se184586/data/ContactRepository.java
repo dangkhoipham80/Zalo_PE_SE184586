@@ -1,25 +1,27 @@
 package com.example.zalo_pe_se184586.data;
 
+import android.content.Context;
+
 import com.example.zalo_pe_se184586.model.Contact;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class ContactRepository {
     private static volatile ContactRepository instance;
-    private final List<Contact> contacts;
+    private AppDatabase database;
+    private Context context;
 
-    private ContactRepository() {
-        contacts = new ArrayList<>();
-        seedContacts();
+    private ContactRepository(Context context) {
+        this.context = context.getApplicationContext();
+        this.database = AppDatabase.getInstance(this.context);
     }
 
-    public static ContactRepository getInstance() {
+    public static ContactRepository getInstance(Context context) {
         if (instance == null) {
             synchronized (ContactRepository.class) {
                 if (instance == null) {
-                    instance = new ContactRepository();
+                    instance = new ContactRepository(context);
                 }
             }
         }
@@ -27,19 +29,20 @@ public class ContactRepository {
     }
 
     public List<Contact> getContacts() {
+        List<Contact> contacts = database.getAllContacts();
         return Collections.unmodifiableList(contacts);
     }
 
-    private void seedContacts() {
-        contacts.add(new Contact("1", "Alice Nguyen", ""));
-        contacts.add(new Contact("2", "Bao Tran", ""));
-        contacts.add(new Contact("3", "Chi Le", ""));
-        contacts.add(new Contact("4", "Duy Pham", ""));
-        contacts.add(new Contact("5", "Emily Vo", ""));
-        contacts.add(new Contact("6", "Gia Bui", ""));
-        contacts.add(new Contact("7", "Hien Ho", ""));
-        contacts.add(new Contact("8", "Khoa Dao", ""));
-        contacts.add(new Contact("9", "Linh Phan", ""));
-        contacts.add(new Contact("10", "Minh Dang", ""));
+    public List<Contact> getFriends() {
+        List<Contact> friends = database.getFriends();
+        return Collections.unmodifiableList(friends);
+    }
+
+    public void addContact(Contact contact) {
+        database.addContact(contact);
+    }
+
+    public void addFriend(String contactId) {
+        database.addFriend(contactId);
     }
 }

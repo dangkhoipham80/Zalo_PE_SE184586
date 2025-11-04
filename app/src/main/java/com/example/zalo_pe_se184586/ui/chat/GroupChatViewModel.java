@@ -1,10 +1,12 @@
 package com.example.zalo_pe_se184586.ui.chat;
 
+import android.app.Application;
+
 import androidx.annotation.NonNull;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.SavedStateHandle;
-import androidx.lifecycle.ViewModel;
 
 import com.example.zalo_pe_se184586.data.GroupRepository;
 import com.example.zalo_pe_se184586.model.Group;
@@ -12,17 +14,19 @@ import com.example.zalo_pe_se184586.model.Message;
 
 import java.util.UUID;
 
-public class GroupChatViewModel extends ViewModel {
+public class GroupChatViewModel extends AndroidViewModel {
 
     static final String KEY_GROUP_ID = "group_id";
 
     private final SavedStateHandle savedStateHandle;
-    private final GroupRepository repository = GroupRepository.getInstance();
+    private final GroupRepository repository;
     private final MediatorLiveData<Group> groupLiveData = new MediatorLiveData<>();
     private LiveData<Group> sourceLiveData;
 
-    public GroupChatViewModel(@NonNull SavedStateHandle savedStateHandle) {
+    public GroupChatViewModel(@NonNull Application application, @NonNull SavedStateHandle savedStateHandle) {
+        super(application);
         this.savedStateHandle = savedStateHandle;
+        this.repository = GroupRepository.getInstance(application);
         String groupId = savedStateHandle.get(KEY_GROUP_ID);
         if (groupId != null) {
             attachGroup(groupId);

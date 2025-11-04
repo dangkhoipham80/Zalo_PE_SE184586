@@ -29,7 +29,7 @@ public class ContactsActivity extends AppCompatActivity {
 
         setSupportActionBar(binding.toolbar);
 
-        List<Contact> contacts = ContactRepository.getInstance().getContacts();
+        List<Contact> contacts = ContactRepository.getInstance(this).getContacts();
         ContactsAdapter adapter = new ContactsAdapter(contacts);
         binding.contactsRecycler.setLayoutManager(new LinearLayoutManager(this));
         binding.contactsRecycler.setAdapter(adapter);
