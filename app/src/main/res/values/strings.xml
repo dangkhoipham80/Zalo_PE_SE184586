@@ -36,6 +36,11 @@
     <string name="new_chat">New Chat</string>
     <string name="new_group">New Group</string>
 
+    <!-- Delete Group -->
+    <string name="delete_group_title">Delete Group</string>
+    <string name="delete_group_message">Are you sure you want to delete \"%1$s\"? All messages will be deleted.</string>
+    <string name="delete">Delete</string>
+
     <string name="discover_title">Discover</string>
     <string name="discover_news">News</string>
     <string name="discover_trending">Trending</string>

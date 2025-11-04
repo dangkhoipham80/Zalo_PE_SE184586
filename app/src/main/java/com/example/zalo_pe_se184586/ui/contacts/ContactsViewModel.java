@@ -58,16 +58,20 @@ public class ContactsViewModel extends AndroidViewModel {
         
         List<Contact> filtered;
         switch (currentFilter) {
-            case 1: // Friends
+            case 1: // Friends - chỉ hiển thị friends
                 filtered = contactRepository.getFriends();
                 break;
-            case 2: // Groups - For now show all contacts, but this could be groups
-                filtered = new ArrayList<>(list);
+            case 2: // Groups - không hiển thị contacts ở tab này, sẽ xử lý riêng trong Fragment
+                filtered = new ArrayList<>(); // Empty list, Fragment sẽ xử lý Groups riêng
                 break;
-            default: // All
+            default: // All - hiển thị tất cả contacts (friends + non-friends)
                 filtered = new ArrayList<>(list);
                 break;
         }
         filteredContacts.setValue(filtered);
+    }
+
+    public int getCurrentFilter() {
+        return currentFilter;
     }
 }

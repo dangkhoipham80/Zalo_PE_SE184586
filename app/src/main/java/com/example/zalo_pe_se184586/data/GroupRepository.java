@@ -108,4 +108,55 @@ public class GroupRepository {
         }
         return groupList;
     }
+
+    /**
+     * Find or create a one-to-one group with a contact
+     */
+    public Group findOrCreateOneToOneGroup(Contact contact) {
+        Group group = database.findOrCreateOneToOneGroup(contact);
+        // Update LiveData
+        MutableLiveData<Group> liveData = groups.get(group.getId());
+        if (liveData == null) {
+            liveData = new MutableLiveData<>(group);
+            groups.put(group.getId(), liveData);
+        } else {
+            liveData.setValue(group);
+        }
+        return group;
+    }
+
+    /**
+     * Add a member to an existing group
+     */
+    public void addMemberToGroup(String groupId, Contact contact) {
+        database.addMemberToGroup(groupId, contact);
+        // Reload group from database and update LiveData
+        Group group = database.getGroup(groupId);
+        if (group != null) {
+            MutableLiveData<Group> liveData = groups.get(groupId);
+            if (liveData != null) {
+                liveData.setValue(group);
+            } else {
+                liveData = new MutableLiveData<>(group);
+                groups.put(groupId, liveData);
+            }
+        }
+    }
+
+    /**
+     * Delete a group
+     */
+    public void deleteGroup(String groupId) {
+        database.deleteGroup(groupId);
+        // Remove from LiveData map
+        groups.remove(groupId);
+    }
+
+    /**
+     * Refresh all groups from database
+     */
+    public void refreshGroups() {
+        groups.clear();
+        loadGroupsFromDatabase();
+    }
 }

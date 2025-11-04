@@ -99,8 +99,10 @@ public class ChatListViewModel extends AndroidViewModel {
         groupsLiveData.setValue(filtered);
     }
 
-    /** Gọi khi cần reload lại từ repository (tuỳ ý) */
+    /** Gọi khi cần reload lại từ repository (sau khi xóa group, tạo mới, etc.) */
     public void refresh() {
+        // Refresh repository first to reload from database
+        groupRepo.refreshGroups();
         List<Group> all = groupRepo.getAllGroups();
         original.clear();
         if (all != null) original.addAll(all);

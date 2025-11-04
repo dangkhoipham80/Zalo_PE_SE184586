@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -14,10 +15,15 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.zalo_pe_se184586.databinding.FragmentContactsBinding;
 import com.example.zalo_pe_se184586.model.Contact;
+import com.example.zalo_pe_se184586.model.Group;
 import com.example.zalo_pe_se184586.ui.main.MainActivity;
 import com.example.zalo_pe_se184586.ui.select.SelectContactsActivity;
+import com.example.zalo_pe_se184586.ui.chat.GroupChatActivity;
+import com.example.zalo_pe_se184586.data.GroupRepository;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
+
+import java.util.List;
 
 /**
  * Fragment displaying contacts with tabs: All, Friends, Groups
@@ -27,6 +33,7 @@ public class ContactsFragment extends Fragment implements MainActivity.Searchabl
     private FragmentContactsBinding binding;
     private ContactsViewModel viewModel;
     private ContactsFragmentAdapter adapter;
+    private GroupRepository groupRepository;
 
     @Nullable
     @Override
@@ -41,6 +48,7 @@ public class ContactsFragment extends Fragment implements MainActivity.Searchabl
         super.onViewCreated(view, savedInstanceState);
 
         viewModel = new ViewModelProvider(this).get(ContactsViewModel.class);
+        groupRepository = GroupRepository.getInstance(requireContext());
 
         // Setup tabs
         binding.tabLayout.addTab(binding.tabLayout.newTab().setText("All"));
@@ -94,16 +102,81 @@ public class ContactsFragment extends Fragment implements MainActivity.Searchabl
                 .setItems(options, (dialog, which) -> {
                     switch (which) {
                         case 0: // Send message
-                            // TODO: Open 1-1 chat
+                            sendMessageToContact(contact);
                             break;
                         case 1: // View profile
-                            // TODO: Show profile
+                            showContactProfile(contact);
                             break;
                         case 2: // Add to group
-                            // TODO: Group selector
+                            showGroupSelector(contact);
                             break;
                     }
                 })
+                .show();
+    }
+
+    private void sendMessageToContact(Contact contact) {
+        // Find or create a 1-1 group with this contact
+        Group group = groupRepository.findOrCreateOneToOneGroup(contact);
+        
+        // Open chat activity
+        Intent intent = new Intent(requireContext(), GroupChatActivity.class);
+        intent.putExtra(GroupChatActivity.EXTRA_GROUP, group);
+        startActivity(intent);
+    }
+
+    private void showContactProfile(Contact contact) {
+        StringBuilder profileInfo = new StringBuilder();
+        profileInfo.append("Name: ").append(contact.getName()).append("\n");
+        profileInfo.append("ID: ").append(contact.getId()).append("\n");
+        if (contact.getAvatarUrl() != null && !contact.getAvatarUrl().isEmpty()) {
+            profileInfo.append("Avatar: ").append(contact.getAvatarUrl()).append("\n");
+        } else {
+            profileInfo.append("Avatar: Not set\n");
+        }
+
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Contact Profile")
+                .setMessage(profileInfo.toString())
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void showGroupSelector(Contact contact) {
+        List<Group> allGroups = groupRepository.getAllGroups();
+        
+        if (allGroups.isEmpty()) {
+            Toast.makeText(requireContext(), "No groups available. Create a group first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Build array of group names
+        String[] groupNames = new String[allGroups.size()];
+        for (int i = 0; i < allGroups.size(); i++) {
+            groupNames[i] = allGroups.get(i).getName();
+        }
+
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Select a group to add " + contact.getName())
+                .setItems(groupNames, (dialog, which) -> {
+                    Group selectedGroup = allGroups.get(which);
+                    // Check if contact is already in the group
+                    boolean alreadyInGroup = false;
+                    for (Contact member : selectedGroup.getMembers()) {
+                        if (member.getId().equals(contact.getId())) {
+                            alreadyInGroup = true;
+                            break;
+                        }
+                    }
+                    
+                    if (alreadyInGroup) {
+                        Toast.makeText(requireContext(), contact.getName() + " is already in this group.", Toast.LENGTH_SHORT).show();
+                    } else {
+                        groupRepository.addMemberToGroup(selectedGroup.getId(), contact);
+                        Toast.makeText(requireContext(), "Added " + contact.getName() + " to " + selectedGroup.getName(), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 

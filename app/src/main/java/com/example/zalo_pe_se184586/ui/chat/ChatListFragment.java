@@ -12,6 +12,8 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.example.zalo_pe_se184586.R;
+import com.example.zalo_pe_se184586.data.GroupRepository;
 import com.example.zalo_pe_se184586.databinding.FragmentChatListBinding;
 import com.example.zalo_pe_se184586.model.Group;
 import com.example.zalo_pe_se184586.ui.chat.GroupChatActivity;
@@ -19,12 +21,14 @@ import com.example.zalo_pe_se184586.ui.main.ChatListAdapter;
 // ⚠️ import đúng ViewModel ở package ui.main
 import com.example.zalo_pe_se184586.ui.main.ChatListViewModel;
 import com.example.zalo_pe_se184586.ui.main.MainActivity;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class ChatListFragment extends Fragment implements MainActivity.SearchableFragment {
 
     private FragmentChatListBinding binding;
     private ChatListViewModel viewModel;
     private ChatListAdapter adapter;
+    private GroupRepository groupRepository;
 
     @Nullable
     @Override
@@ -38,11 +42,14 @@ public class ChatListFragment extends Fragment implements MainActivity.Searchabl
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        groupRepository = GroupRepository.getInstance(requireContext());
+        
         // Có thể dùng new ViewModelProvider(this) cũng được;
         // dùng requireActivity() nếu muốn share VM giữa nhiều fragment.
         viewModel = new ViewModelProvider(this).get(ChatListViewModel.class);
 
         adapter = new ChatListAdapter(this::openGroupChat);
+        adapter.setOnChatLongClickListener(this::showDeleteGroupDialog);
         binding.chatRecycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.chatRecycler.setAdapter(adapter);
 
@@ -59,6 +66,18 @@ public class ChatListFragment extends Fragment implements MainActivity.Searchabl
         Intent intent = new Intent(requireContext(), GroupChatActivity.class);
         intent.putExtra(GroupChatActivity.EXTRA_GROUP, group);
         startActivity(intent);
+    }
+
+    private void showDeleteGroupDialog(Group group) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.delete_group_title)
+                .setMessage(getString(R.string.delete_group_message, group.getName()))
+                .setPositiveButton(R.string.delete, (dialog, which) -> {
+                    groupRepository.deleteGroup(group.getId());
+                    viewModel.refresh();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     @Override

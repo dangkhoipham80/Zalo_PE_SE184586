@@ -13,6 +13,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.zalo_pe_se184586.R;
+import com.example.zalo_pe_se184586.data.AppDatabase;
 import com.example.zalo_pe_se184586.databinding.ActivityGroupChatBinding;
 import com.example.zalo_pe_se184586.model.Contact;
 import com.example.zalo_pe_se184586.model.Group;
@@ -87,10 +88,13 @@ public class GroupChatActivity extends AppCompatActivity {
 
         // Update toolbar
         binding.toolbar.setTitle(group.getName());
-        binding.toolbar.setSubtitle(getString(R.string.members_count_format, group.getMembers().size()));
+        
+        // Lấy members để hiển thị (filter bỏ current user nếu là chat 1-1)
+        List<Contact> displayMembers = getDisplayMembers(group);
+        binding.toolbar.setSubtitle(getString(R.string.members_count_format, displayMembers.size()));
 
-        // Update members list
-        binding.membersText.setText(joinMemberNames(group.getMembers()));
+        // Update members list (chỉ hiển thị người khác, không hiển thị mình)
+        binding.membersText.setText(joinMemberNames(displayMembers));
 
         // Update messages
         List<Message> messages = group.getMessages();
@@ -100,6 +104,35 @@ public class GroupChatActivity extends AppCompatActivity {
         if (!messages.isEmpty()) {
             binding.messagesRecycler.scrollToPosition(messages.size() - 1);
         }
+    }
+
+    /**
+     * Lấy danh sách members để hiển thị
+     * - Với chat 1-1 (2 members): chỉ hiển thị người kia (giống Zalo)
+     * - Với group chat (>2 members): hiển thị tất cả (trừ current user)
+     */
+    private List<Contact> getDisplayMembers(Group group) {
+        List<Contact> allMembers = group.getMembers();
+        String currentUserId = AppDatabase.getInstance(this).getCurrentUserId();
+        
+        // Nếu là chat 1-1 (chính xác 2 members), chỉ hiển thị người kia
+        if (allMembers.size() == 2) {
+            // Tìm member khác với current user
+            for (Contact member : allMembers) {
+                if (!member.getId().equals(currentUserId)) {
+                    return java.util.Collections.singletonList(member);
+                }
+            }
+        }
+        
+        // Với group chat, hiển thị tất cả trừ current user
+        List<Contact> displayMembers = new java.util.ArrayList<>();
+        for (Contact member : allMembers) {
+            if (!member.getId().equals(currentUserId)) {
+                displayMembers.add(member);
+            }
+        }
+        return displayMembers;
     }
 
     private String joinMemberNames(List<Contact> members) {
@@ -131,10 +164,11 @@ public class GroupChatActivity extends AppCompatActivity {
             return;
         }
 
+        List<Contact> displayMembers = getDisplayMembers(group);
         StringBuilder info = new StringBuilder();
         info.append("Group Name: ").append(group.getName()).append("\n\n");
-        info.append("Members (").append(group.getMembers().size()).append("):\n");
-        for (Contact member : group.getMembers()) {
+        info.append("Members (").append(displayMembers.size()).append("):\n");
+        for (Contact member : displayMembers) {
             info.append("• ").append(member.getName()).append("\n");
         }
 

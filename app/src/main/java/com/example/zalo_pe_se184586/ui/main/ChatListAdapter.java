@@ -23,11 +23,20 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatVi
         void onChatClick(Group group);
     }
 
+    public interface OnChatLongClickListener {
+        void onChatLongClick(Group group);
+    }
+
     private final List<Group> groups = new ArrayList<>();
     private final OnChatClickListener listener;
+    private OnChatLongClickListener longClickListener;
 
     public ChatListAdapter(OnChatClickListener listener) {
         this.listener = listener;
+    }
+
+    public void setOnChatLongClickListener(OnChatLongClickListener listener) {
+        this.longClickListener = listener;
     }
 
     public void submitList(List<Group> newGroups) {
@@ -88,6 +97,12 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatVi
             }
 
             binding.getRoot().setOnClickListener(v -> listener.onChatClick(group));
+            binding.getRoot().setOnLongClickListener(v -> {
+                if (longClickListener != null) {
+                    longClickListener.onChatLongClick(group);
+                }
+                return true;
+            });
         }
 
         private String formatTime(long timestamp) {
