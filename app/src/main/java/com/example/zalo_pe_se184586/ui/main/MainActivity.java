@@ -16,7 +16,7 @@ import com.example.zalo_pe_se184586.databinding.ActivityMainBinding;
 // ✅ Import các Fragment đúng package
 import com.example.zalo_pe_se184586.ui.chat.ChatListFragment;
 import com.example.zalo_pe_se184586.ui.contacts.ContactsFragment;
-import com.example.zalo_pe_se184586.ui.discover.DiscoverFragment;
+import com.example.zalo_pe_se184586.ui.main.DiscoverFragment; // Use the fragment with implementation
 import com.example.zalo_pe_se184586.ui.profile.ProfileFragment;
 
 import com.example.zalo_pe_se184586.ui.select.SelectContactsActivity;
