@@ -133,4 +133,12 @@ public class MainActivity extends AppCompatActivity {
     public interface SearchableFragment {
         void onSearchQuery(String query);
     }
+
+    public void hideFAB() {
+        binding.fab.hide();
+    }
+
+    public void showFAB() {
+        binding.fab.show();
+    }
 }

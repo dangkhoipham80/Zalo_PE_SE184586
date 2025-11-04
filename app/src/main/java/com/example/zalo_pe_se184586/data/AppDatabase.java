@@ -530,6 +530,16 @@ public class AppDatabase extends SQLiteOpenHelper {
     }
 
     /**
+     * Remove a member from an existing group
+     */
+    public void removeMemberFromGroup(String groupId, String contactId) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.delete(TABLE_GROUP_MEMBERS,
+                COL_GM_GROUP_ID + " = ? AND " + COL_GM_CONTACT_ID + " = ?",
+                new String[]{groupId, contactId});
+    }
+
+    /**
      * Delete a group and all related data (messages, members)
      */
     public void deleteGroup(String groupId) {

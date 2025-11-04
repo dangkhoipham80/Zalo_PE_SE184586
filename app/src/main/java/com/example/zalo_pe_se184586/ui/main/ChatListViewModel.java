@@ -64,6 +64,8 @@ public class ChatListViewModel extends AndroidViewModel {
 
         original.clear();
         if (all != null) original.addAll(all);
+        // Sort by latest message timestamp (descending)
+        sortGroupsByLatestMessage(original);
         groupsLiveData.setValue(new ArrayList<>(original));
     }
 
@@ -75,7 +77,9 @@ public class ChatListViewModel extends AndroidViewModel {
     /** Lọc theo tên group (hoặc theo tên thành viên nếu bạn muốn mở rộng) */
     public void search(String query) {
         if (query == null || query.trim().isEmpty()) {
-            groupsLiveData.setValue(new ArrayList<>(original));
+            List<Group> sorted = new ArrayList<>(original);
+            sortGroupsByLatestMessage(sorted);
+            groupsLiveData.setValue(sorted);
             return;
         }
         String q = query.trim().toLowerCase();
@@ -96,6 +100,8 @@ public class ChatListViewModel extends AndroidViewModel {
                 }
             }
         }
+        // Sort filtered results by latest message timestamp (descending)
+        sortGroupsByLatestMessage(filtered);
         groupsLiveData.setValue(filtered);
     }
 
@@ -106,6 +112,29 @@ public class ChatListViewModel extends AndroidViewModel {
         List<Group> all = groupRepo.getAllGroups();
         original.clear();
         if (all != null) original.addAll(all);
+        // Sort by latest message timestamp (descending)
+        sortGroupsByLatestMessage(original);
         groupsLiveData.setValue(new ArrayList<>(original));
+    }
+
+    /**
+     * Sắp xếp groups theo thời gian tin nhắn mới nhất (descending - mới nhất ở đầu)
+     * Groups không có tin nhắn sẽ được đặt ở cuối
+     */
+    private void sortGroupsByLatestMessage(List<Group> groups) {
+        Collections.sort(groups, (g1, g2) -> {
+            Message lastMsg1 = g1.getLastMessage();
+            Message lastMsg2 = g2.getLastMessage();
+            
+            // Nếu cả hai đều có tin nhắn, sort theo timestamp (descending)
+            if (lastMsg1 != null && lastMsg2 != null) {
+                return Long.compare(lastMsg2.getTimestamp(), lastMsg1.getTimestamp());
+            }
+            // Group có tin nhắn đứng trước group không có tin nhắn
+            if (lastMsg1 != null) return -1;
+            if (lastMsg2 != null) return 1;
+            // Cả hai đều không có tin nhắn, giữ nguyên thứ tự
+            return 0;
+        });
     }
 }
