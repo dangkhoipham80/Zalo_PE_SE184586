@@ -2,14 +2,14 @@
 
     <style name="Theme.Zalo_PE_SE184586" parent="Theme.Material3.DayNight.NoActionBar">
 
-    <!-- Primary colors - Zalo Blue -->
-        <item name="colorPrimary">@color/zalo_blue</item>
-        <item name="colorPrimaryVariant">@color/zalo_blue_dark</item>
+    <!-- Primary colors - Purple -->
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
         <item name="colorOnPrimary">@android:color/white</item>
 
         <!-- Secondary colors -->
-        <item name="colorSecondary">@color/zalo_blue_light</item>
-        <item name="colorSecondaryVariant">@color/zalo_blue_dark</item>
+        <item name="colorSecondary">@color/purple_200</item>
+        <item name="colorSecondaryVariant">@color/purple_700</item>
         <item name="colorOnSecondary">@android:color/white</item>
 
         <!-- Surface & background -->
