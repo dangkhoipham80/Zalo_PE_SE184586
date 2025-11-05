@@ -152,7 +152,7 @@ public class AppDatabase extends SQLiteOpenHelper {
     }
 
     private void insertSampleData(SQLiteDatabase db) {
-        // Insert sample contacts
+        // Insert sample contacts with avatar URLs from internet
         String[] contactNames = {
             "Alice Nguyen", "Bao Tran", "Chi Le", "Duy Pham", "Emily Vo",
             "Gia Bui", "Hien Ho", "Khoa Dao", "Linh Phan", "Minh Dang",
@@ -165,12 +165,31 @@ public class AppDatabase extends SQLiteOpenHelper {
             "0912345688", "0912345689", "0912345690", "0912345691", "0912345692"
         };
 
+        // Avatar URLs from ui-avatars.com (simple, colorful avatars)
+        String[] avatarUrls = {
+            "https://ui-avatars.com/api/?name=Alice+Nguyen&size=200&background=6200EE&color=fff",
+            "https://ui-avatars.com/api/?name=Bao+Tran&size=200&background=3700B3&color=fff",
+            "https://ui-avatars.com/api/?name=Chi+Le&size=200&background=BB86FC&color=000",
+            "https://ui-avatars.com/api/?name=Duy+Pham&size=200&background=03DAC5&color=000",
+            "https://ui-avatars.com/api/?name=Emily+Vo&size=200&background=018786&color=fff",
+            "https://ui-avatars.com/api/?name=Gia+Bui&size=200&background=FF6F00&color=fff",
+            "https://ui-avatars.com/api/?name=Hien+Ho&size=200&background=E91E63&color=fff",
+            "https://ui-avatars.com/api/?name=Khoa+Dao&size=200&background=9C27B0&color=fff",
+            "https://ui-avatars.com/api/?name=Linh+Phan&size=200&background=3F51B5&color=fff",
+            "https://ui-avatars.com/api/?name=Minh+Dang&size=200&background=009688&color=fff",
+            "https://ui-avatars.com/api/?name=Nam+Vo&size=200&background=4CAF50&color=fff",
+            "https://ui-avatars.com/api/?name=Oanh+Tran&size=200&background=8BC34A&color=000",
+            "https://ui-avatars.com/api/?name=Phong+Le&size=200&background=CDDC39&color=000",
+            "https://ui-avatars.com/api/?name=Quynh+Pham&size=200&background=FFC107&color=000",
+            "https://ui-avatars.com/api/?name=Son+Ho&size=200&background=FF9800&color=fff"
+        };
+
         for (int i = 0; i < contactNames.length; i++) {
             ContentValues cv = new ContentValues();
             cv.put(COL_CONTACT_ID, String.valueOf(i + 1));
             cv.put(COL_CONTACT_NAME, contactNames[i]);
             cv.put(COL_CONTACT_PHONE, phoneNumbers[i]);
-            cv.put(COL_CONTACT_AVATAR_URL, "");
+            cv.put(COL_CONTACT_AVATAR_URL, avatarUrls[i]);
             db.insert(TABLE_CONTACTS, null, cv);
         }
 
@@ -316,8 +335,27 @@ public class AppDatabase extends SQLiteOpenHelper {
         if (contact.getPhoneNumber() != null) {
             cv.put(COL_CONTACT_PHONE, contact.getPhoneNumber());
         }
-        cv.put(COL_CONTACT_AVATAR_URL, contact.getAvatarUrl());
+        // Set default avatar if not provided
+        String avatarUrl = contact.getAvatarUrl();
+        if (avatarUrl == null || avatarUrl.isEmpty()) {
+            avatarUrl = getDefaultAvatarUrl(contact.getName());
+        }
+        cv.put(COL_CONTACT_AVATAR_URL, avatarUrl);
         db.insertWithOnConflict(TABLE_CONTACTS, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    /**
+     * Get default avatar URL from ui-avatars.com based on name
+     */
+    private String getDefaultAvatarUrl(String name) {
+        if (name == null || name.isEmpty()) {
+            name = "User";
+        }
+        // Use purple theme colors for default avatars
+        String[] colors = {"6200EE", "3700B3", "BB86FC", "9C27B0", "3F51B5"};
+        int colorIndex = Math.abs(name.hashCode()) % colors.length;
+        String encodedName = name.replace(" ", "+");
+        return "https://ui-avatars.com/api/?name=" + encodedName + "&size=200&background=" + colors[colorIndex] + "&color=fff";
     }
 
     public void addFriend(String contactId) {
@@ -404,21 +442,41 @@ public class AppDatabase extends SQLiteOpenHelper {
         SQLiteDatabase db = getWritableDatabase();
         String groupId = UUID.randomUUID().toString();
         
-        // Insert group
+        // Insert group (groups don't have avatar_url in current schema, but members do)
         ContentValues cv = new ContentValues();
         cv.put(COL_GROUP_ID, groupId);
         cv.put(COL_GROUP_NAME, name);
         db.insert(TABLE_GROUPS, null, cv);
         
-        // Insert members
+        // Insert members (ensure they have default avatars if missing)
+        List<Contact> membersWithAvatars = new ArrayList<>();
         for (Contact member : members) {
+            // Ensure member has avatar
+            if (member.getAvatarUrl() == null || member.getAvatarUrl().isEmpty()) {
+                String defaultAvatar = getDefaultAvatarUrl(member.getName());
+                member = new Contact(member.getId(), member.getName(), member.getPhoneNumber(), defaultAvatar);
+                // Update in database
+                updateContactAvatar(member.getId(), defaultAvatar);
+            }
+            membersWithAvatars.add(member);
+            
             ContentValues memberCv = new ContentValues();
             memberCv.put(COL_GM_GROUP_ID, groupId);
             memberCv.put(COL_GM_CONTACT_ID, member.getId());
             db.insert(TABLE_GROUP_MEMBERS, null, memberCv);
         }
         
-        return new Group(groupId, name, members, new ArrayList<>());
+        return new Group(groupId, name, membersWithAvatars, new ArrayList<>());
+    }
+
+    /**
+     * Update contact's avatar URL
+     */
+    public void updateContactAvatar(String contactId, String avatarUrl) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COL_CONTACT_AVATAR_URL, avatarUrl);
+        db.update(TABLE_CONTACTS, cv, COL_CONTACT_ID + " = ?", new String[]{contactId});
     }
 
     public void addMessage(String groupId, Message message) {
@@ -537,6 +595,16 @@ public class AppDatabase extends SQLiteOpenHelper {
         db.delete(TABLE_GROUP_MEMBERS,
                 COL_GM_GROUP_ID + " = ? AND " + COL_GM_CONTACT_ID + " = ?",
                 new String[]{groupId, contactId});
+    }
+
+    /**
+     * Update group name
+     */
+    public void updateGroupName(String groupId, String newName) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COL_GROUP_NAME, newName);
+        db.update(TABLE_GROUPS, cv, COL_GROUP_ID + " = ?", new String[]{groupId});
     }
 
     /**

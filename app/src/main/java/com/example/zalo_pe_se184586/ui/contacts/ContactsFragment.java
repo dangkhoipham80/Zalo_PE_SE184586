@@ -22,6 +22,8 @@ import com.example.zalo_pe_se184586.ui.select.SelectContactsActivity;
 import com.example.zalo_pe_se184586.ui.chat.GroupChatActivity;
 import com.example.zalo_pe_se184586.data.GroupRepository;
 import com.example.zalo_pe_se184586.ui.main.ChatListAdapter;
+import com.example.zalo_pe_se184586.data.ContactRepository;
+import com.example.zalo_pe_se184586.R;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.tabs.TabLayout;
 import com.example.zalo_pe_se184586.model.Message;
@@ -65,6 +67,8 @@ public class ContactsFragment extends Fragment implements MainActivity.Searchabl
         // Setup adapters
         contactAdapter = new ContactsFragmentAdapter(contact -> showContactOptions(contact));
         groupAdapter = new ChatListAdapter(group -> openGroupChat(group));
+        groupAdapter.setOnChatLongClickListener(this::showGroupOptions);
+        groupAdapter.setShowSettingsButton(true); // Show settings button for groups
         
         // Set initial adapter (All tab)
         currentAdapter = contactAdapter;
@@ -294,6 +298,145 @@ public class ContactsFragment extends Fragment implements MainActivity.Searchabl
         Intent intent = new Intent(requireContext(), GroupChatActivity.class);
         intent.putExtra(GroupChatActivity.EXTRA_GROUP, group);
         startActivity(intent);
+    }
+
+    private void showGroupOptions(Group group) {
+        String[] options = {
+            requireContext().getString(R.string.action_edit_name),
+            requireContext().getString(R.string.action_add_member),
+            requireContext().getString(R.string.delete)
+        };
+        
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(group.getName())
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: // Edit name
+                            showEditGroupNameDialog(group);
+                            break;
+                        case 1: // Add member
+                            showAddMemberToGroupDialog(group);
+                            break;
+                        case 2: // Delete
+                            showDeleteGroupDialog(group);
+                            break;
+                    }
+                })
+                .show();
+    }
+
+    private void showEditGroupNameDialog(Group group) {
+        com.google.android.material.textfield.TextInputLayout inputLayout = 
+            new com.google.android.material.textfield.TextInputLayout(requireContext());
+        inputLayout.setHint(getString(R.string.prompt_group_name));
+        int padding = requireContext().getResources().getDimensionPixelSize(R.dimen.dialog_content_padding);
+        inputLayout.setPadding(padding, padding, padding, 0);
+        
+        com.google.android.material.textfield.TextInputEditText editText = 
+            new com.google.android.material.textfield.TextInputEditText(inputLayout.getContext());
+        editText.setLayoutParams(new com.google.android.material.textfield.TextInputLayout.LayoutParams(
+                com.google.android.material.textfield.TextInputLayout.LayoutParams.MATCH_PARENT,
+                com.google.android.material.textfield.TextInputLayout.LayoutParams.WRAP_CONTENT));
+        editText.setText(group.getName());
+        inputLayout.addView(editText);
+
+        androidx.appcompat.app.AlertDialog dialog = new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.action_edit_name)
+                .setView(inputLayout)
+                .setPositiveButton(android.R.string.ok, null)
+                .setNegativeButton(android.R.string.cancel, (d, which) -> d.dismiss())
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            CharSequence text = editText.getText();
+            String newName = text != null ? text.toString().trim() : "";
+            if (newName.isEmpty()) {
+                inputLayout.setError(getString(R.string.error_group_name_required));
+                return;
+            }
+            inputLayout.setError(null);
+            groupRepository.updateGroupName(group.getId(), newName);
+            // Refresh groups list
+            refreshGroupsList();
+            Toast.makeText(requireContext(), getString(R.string.group_name_updated), Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        }));
+
+        dialog.show();
+    }
+
+    private void showAddMemberToGroupDialog(Group group) {
+        ContactRepository contactRepo = ContactRepository.getInstance(requireContext());
+        List<Contact> allContacts = contactRepo.getContacts();
+        
+        // Filter: contacts NOT IN group
+        List<Contact> availableContacts = new java.util.ArrayList<>();
+        for (Contact contact : allContacts) {
+            boolean isInGroup = false;
+            for (Contact member : group.getMembers()) {
+                if (member.getId().equals(contact.getId())) {
+                    isInGroup = true;
+                    break;
+                }
+            }
+            if (!isInGroup) {
+                availableContacts.add(contact);
+            }
+        }
+        
+        if (availableContacts.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.no_contacts_available, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        String[] contactNames = new String[availableContacts.size()];
+        for (int i = 0; i < availableContacts.size(); i++) {
+            contactNames[i] = availableContacts.get(i).getName();
+        }
+
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.select_member_to_add)
+                .setItems(contactNames, (dialog, which) -> {
+                    Contact selectedContact = availableContacts.get(which);
+                    groupRepository.addMemberToGroup(group.getId(), selectedContact);
+                    refreshGroupsList();
+                    Toast.makeText(requireContext(), 
+                        getString(R.string.member_added_success, selectedContact.getName()), 
+                        Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void showDeleteGroupDialog(Group group) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.delete_group_title)
+                .setMessage(getString(R.string.delete_group_message, group.getName()))
+                .setPositiveButton(R.string.delete, (dialog, which) -> {
+                    groupRepository.deleteGroup(group.getId());
+                    refreshGroupsList();
+                    Toast.makeText(requireContext(), getString(R.string.group_deleted), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void refreshGroupsList() {
+        if (currentAdapter == groupAdapter) {
+            groupRepository.refreshGroups();
+            List<Group> allGroups = groupRepository.getAllGroups();
+            List<Group> filteredGroups = new java.util.ArrayList<>();
+            for (Group group : allGroups) {
+                if (group.getMembers().size() > 2) {
+                    filteredGroups.add(group);
+                }
+            }
+            sortGroupsByLatestMessage(filteredGroups);
+            groupAdapter.submitList(filteredGroups);
+            binding.emptyState.setVisibility(
+                    filteredGroups.isEmpty() ? View.VISIBLE : View.GONE
+            );
+        }
     }
 
     @Override

@@ -144,6 +144,24 @@ public class GroupRepository {
     }
 
     /**
+     * Update group name
+     */
+    public void updateGroupName(String groupId, String newName) {
+        database.updateGroupName(groupId, newName);
+        // Reload group from database and update LiveData
+        Group group = database.getGroup(groupId);
+        if (group != null) {
+            MutableLiveData<Group> liveData = groups.get(groupId);
+            if (liveData != null) {
+                liveData.setValue(group);
+            } else {
+                liveData = new MutableLiveData<>(group);
+                groups.put(groupId, liveData);
+            }
+        }
+    }
+
+    /**
      * Delete a group
      */
     public void deleteGroup(String groupId) {

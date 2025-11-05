@@ -51,6 +51,9 @@ dependencies {
     implementation("androidx.sqlite:sqlite:2.4.0")
     implementation("androidx.sqlite:sqlite-framework:2.4.0")
 
+    // Glide for loading images from URL
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

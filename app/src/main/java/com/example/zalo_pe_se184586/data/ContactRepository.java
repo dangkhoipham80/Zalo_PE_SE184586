@@ -94,4 +94,11 @@ public class ContactRepository {
     public Contact findContactByPhoneNumber(String phoneNumber) {
         return database.findContactByPhoneNumber(phoneNumber);
     }
+
+    /**
+     * Update contact's avatar URL
+     */
+    public void updateContactAvatar(String contactId, String avatarUrl) {
+        database.updateContactAvatar(contactId, avatarUrl);
+    }
 }

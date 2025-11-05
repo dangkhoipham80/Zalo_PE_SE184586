@@ -30,6 +30,7 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatVi
     private final List<Group> groups = new ArrayList<>();
     private final OnChatClickListener listener;
     private OnChatLongClickListener longClickListener;
+    private boolean showSettingsButton = false;
 
     public ChatListAdapter(OnChatClickListener listener) {
         this.listener = listener;
@@ -37,6 +38,14 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatVi
 
     public void setOnChatLongClickListener(OnChatLongClickListener listener) {
         this.longClickListener = listener;
+    }
+
+    /**
+     * Set whether to show settings button on each group item
+     * @param show true to show settings button, false to hide
+     */
+    public void setShowSettingsButton(boolean show) {
+        this.showSettingsButton = show;
     }
 
     public void submitList(List<Group> newGroups) {
@@ -94,6 +103,18 @@ public class ChatListAdapter extends RecyclerView.Adapter<ChatListAdapter.ChatVi
             } else {
                 binding.lastMessageText.setText("No messages yet");
                 binding.timeText.setText("");
+            }
+
+            // Show/hide settings button
+            if (showSettingsButton) {
+                binding.settingsButton.setVisibility(View.VISIBLE);
+                binding.settingsButton.setOnClickListener(v -> {
+                    if (longClickListener != null) {
+                        longClickListener.onChatLongClick(group);
+                    }
+                });
+            } else {
+                binding.settingsButton.setVisibility(View.GONE);
             }
 
             binding.getRoot().setOnClickListener(v -> listener.onChatClick(group));
